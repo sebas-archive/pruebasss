@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="color-scheme" content="light dark" />
+        <title>{% block titulo %}Ledger transaccional{% endblock %}</title>
+        {# El tema guardado se aplica aquí, antes de cargar el CSS, para que la página no se pinte un instante con el tema equivocado. Sin elección guardada manda el sistema. #}
+        <script>
+            try {
+                const tema = localStorage.getItem("tema");
+                if (tema === "claro" || tema === "oscuro") document.documentElement.dataset.tema = tema;
+            } catch {}
+        </script>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/tokens.css') }}" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}" />
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/animaciones.css') }}" />
+        <script src="{{ url_for('static', filename='js/tema.js') }}" defer></script>
+        <script src="{{ url_for('static', filename='js/codigos.js') }}" defer></script>
+        <script src="{{ url_for('static', filename='js/animaciones.js') }}" defer></script>
+        <style>
+            :root {
+                --mono: var(--fuente-mono);
+            }
+            /* Los controles que muestran claves, códigos o montos usan la misma pila:
+               si no, el `select` y el `input` del formulario quedarían en la
+               proporcional, que es justo lo que la monoespaciada viene a evitar. */
+            code,
+            .mono,
+            select,
+            option,
+            input {
+                font-family: var(--mono);
+            }
+        </style>
+    </head>
+    <body>
+        {# Primer elemento enfocable: con teclado se salta la barra y la navegación (WCAG 2.4.1). #}
+        <a class="saltar" href="#contenido">Saltar al contenido</a>
+        <div class="pagina">
+            {% if g.user %}
+            <header class="barra-superior">
+                <a class="marca" href="/"><span class="marca-cuadro" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Ledger</span></a>
+                {# Las rutas del eje son del administrador: el común sólo tiene su tablero y su historial. El rol se lee de la sesión recargada, no de la cookie. #}
+                {% if g.user.role == rol_administrador %}
+                <nav class="navegacion" aria-label="Administración">
+                    {% for ruta, texto in [("/", "Resumen"), ("/admin/pendientes", "Pendientes"), ("/wallets", "Wallets"), ("/transacciones", "Transacciones"), ("/bloques", "Bloques"), ("/verificar", "Verificar")] %}
+                    <a href="{{ ruta }}"{% if request.path == ruta %} aria-current="page"{% endif %}>{{ texto }}</a>
+                    {% endfor %}
+                </nav>
+                {% else %}
+                <nav class="navegacion" aria-label="Mi cuenta">
+                    {% for ruta, texto in [("/mi-tablero", "Mi tablero"), ("/mi-historial", "Mi historial")] %}
+                    <a href="{{ ruta }}"{% if request.path == ruta %} aria-current="page"{% endif %}>{{ texto }}</a>
+                    {% endfor %}
+                </nav>
+                {% endif %}
+                <div class="sesion">
+                    {% include "_alternar_tema.html" %}
+                    <span>{{ g.user.username }}</span>
+                    {% if g.user.role == rol_administrador %}<span class="rol">administrador</span>{% endif %}
+                    <form method="post" action="{{ url_for('salir') }}">
+                        <button class="boton" type="submit">Salir</button>
+                    </form>
+                </div>
+            </header>
+            {% else %}
+            {# Sin sesión la barra es mínima: Regresar (si la pantalla lo pide), la marca y el tema. #}
+            <header class="barra-minima">
+                {% block regresar %}{% endblock %}
+                <a class="marca" href="{{ url_for('ingresar') }}"><span class="marca-cuadro" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>Ledger transaccional</span></a>
+                {% include "_alternar_tema.html" %}
+            </header>
+            {% endif %}
+            {# Cada pantalla pone aquí su rejilla con su propio <main id="contenido">. #}
+            {% block cuerpo %}{% endblock %}
+        </div>
+        <script>
+            // Un solo guion para los datos copiables de las páginas de trabajo: cada
+            // `[data-copiar]` lleva su valor completo, así que copia lo que se ve. El
+            // aviso dice siempre qué pasó: sin la rama de rechazo, una escritura
+            // denegada se quedaría sin aviso y con la promesa sin manejar; y si falta
+            // la API, el clic tampoco puede quedar en silencio —el valor completo
+            // sigue en el `title` del dato—.
+            document.addEventListener("click", (evento) => {
+                const origen = evento.target.closest("[data-copiar]");
+                if (!origen) return;
+                const avisar = (texto) => {
+                    const aviso = document.createElement("span");
+                    aviso.className = "aviso-copia";
+                    aviso.setAttribute("role", "status");
+                    aviso.textContent = texto;
+                    origen.after(aviso);
+                    setTimeout(() => aviso.remove(), 1200);
+                };
+                if (!navigator.clipboard) {
+                    avisar(" no se pudo copiar");
+                    return;
+                }
+                navigator.clipboard
+                    .writeText(origen.dataset.copiar)
+                    .then(() => avisar(" copiado"))
+                    .catch(() => avisar(" no se pudo copiar"));
+            });
+        </script>
+    </body>
+</html>

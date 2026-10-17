@@ -1,0 +1,20 @@
+# Secretos y entorno local (REQ-21)
+.env
+.venv/
+
+# Material de referencia: no es parte del entregable
+.legacy-project/
+.reference/
+
+# Andamiaje de ejecución y cachés
+__pycache__/
+*.py[codz]
+.pytest_cache/
+# `ruff` deja su caché con un `.gitignore` propio dentro que ignora su contenido;
+# sin esta línea la carpeta no queda ignorada para el repositorio y los editores
+# la muestran como si fuera parte del proyecto.
+.ruff_cache/
+
+# Restos de intentar darle a `podman` un runtime escribible, que en este entorno
+# no sirve: `podman` necesita su almacén y sus espacios de nombres.
+.tmp-podman/
